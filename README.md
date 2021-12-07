@@ -93,7 +93,7 @@ There are several internal helper attributes that you can use.
     local guidColumnId = creature.__columnIds["guid"] -- Will return 0 because guid is the first column in the table creature (it's 0 based because the ElunaQuery functions are 0 based. Lua is usually 1 based)
     local guidColumnName = creature.__columnById[guidColumnId] -- Will return "guid" because column 1 is guid as seen in the line above
     local amountOfColumns = creature.__columnIdCounter -- Will return 24 because the table creature has 24 columns
-    local elunaReadColumnFunction = self.__columnFunctions["guid"] -- Will return function ElunaQuery:GetUInt32 because this is the function to read the value out of an query object. Use like this: elunaReadColumnFunction(query)
+    local elunaReadColumnFunction = self.__columnFunctions["guid"] -- Will return function ElunaQuery:GetUInt32 because this is the function to read the value out of an query object. Use like this: elunaReadColumnFunction(query, columnId)
     local queryObject = WorldDBQuery("SELECT * FROM creature WHERE guid = 123")
     if (queryObject) then
         local guid = elunaReadColumnFunction(queryObject, guidColumnId) -- Will return 123

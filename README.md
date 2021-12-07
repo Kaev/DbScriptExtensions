@@ -52,6 +52,9 @@ existingCreature:Load(123) -- Load data of entry with guid = 123 (guid is the pr
 -- Way 2
 local existingCreature = DbCreature():Load(123)
 
+-- You can now access the columns like a normal Lua table. Attribute names are always the same as the column names in the table (case sensitive!).
+print(existingCreature.map) -- Prints the map id of the loaded creature
+
 -- Load entry with combined primary keys
 local existingPlayerCreateInfo = DbPlayercreateinfo():Load(1, 4) -- Table playercreateinfo has a combined primary key based on column race and class. The order will always be the same as in the database which means we're loading the entry with race = 1 AND class = 4
 ```

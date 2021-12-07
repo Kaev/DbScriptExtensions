@@ -1,10 +1,19 @@
 # DbScriptExtensions
 
-## What is DbScriptExtensions?
-
 DbScriptExtensions is a Lua framework for the [Eluna Lua Engine ©](https://github.com/ElunaLuaEngine/Eluna) that allows you to create, load, modify and delete database entities via your own Lua code.
 
-## How to use DbScriptExtensions
+## Table of Contents
+
+  - [Installation](#how-to-use-dbscriptextensions)
+  - [Examples](#examples)
+    - [Creating a new database object](#creating-a-new-database-object)
+    - [Get unused primary keys](#get-unused-primary-keys)
+    - [Loading a database object](#loading-a-database-object)
+    - [Updating an existing database object](#updating-an-existing-database-object)
+    - [Delete an existing database object](#delete-an-existing-database-object)
+  - [FAQ](#faq)
+
+## Installation
 * Copy the content of this repository to the folder `lua_scripts/extensions/DbScriptExtensions`.
   
   To check if you copied it correctly, make sure you find the README file under `lua_scripts/extensions/DbScriptExtensions/README.md`
@@ -61,10 +70,10 @@ existingCreature:Delete() -- Delete row with guid = 123
 ```
 
 ## FAQ
-### I see errors in my world server console. What can i do?
+### What can i do when i see errors in my world server console?
 Set `DbScriptExtensions_PrintQueries = true` in your file `lua_scripts/extensions/DbScriptExtensions/DbScriptExtensions.ext`. Now restart the world server. It should show all DbScriptExtensions SQL queries that it tries to run. Now you can open up an issue on the GitHub repository with the query it tried to execute and a snippet of your code that leads to this error. Make sure to mention which emulator you're using.
 
-### I updated my emulator and database and now i see errors in my world server console. What can i do?
+### What can i do when i updated my emulator and database and now i see errors in my world server console?
 There were probably some changes in your database because of the update. Try to regenerate the table files by deleting all files under `lua_scripts/extensions/DbScriptExtensions/Mapping` (Do not delete the Mapping folder! Regenerating will fail if you do this!) and setting `DbScriptExtensions_GenerateTableFiles = true` in your file `lua_scripts/extensions/DbScriptExtensions/DbScriptExtensions.ext`. Now you can reload Eluna by typing `reload eluna` into your console or by typing `.reload eluna` ingame. Afterwards set the option back to false and restart your world server. If the error still persists, report the problem as explained in the first question.
 
 ### Are all column names case sensitive?

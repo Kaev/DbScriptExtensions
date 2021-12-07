@@ -4,7 +4,7 @@ DbScriptExtensions is a Lua framework for the [Eluna Lua Engine ©](https://gith
 
 ## Table of Contents
 
-  - [Installation](#how-to-use-dbscriptextensions)
+  - [Installation](#installation)
   - [Examples](#examples)
     - [Creating a new database object](#creating-a-new-database-object)
     - [Get unused primary keys](#get-unused-primary-keys)

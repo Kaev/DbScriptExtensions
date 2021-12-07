@@ -1,0 +1,2 @@
+DbScriptExtensions_PrintQueries = false
+DbScriptExtensions_GenerateTableFiles = true

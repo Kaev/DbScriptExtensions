@@ -1,0 +1,11 @@
+require("DbScriptExtensions_Database")
+
+-- Generate table classes if needed
+if (DbScriptExtensions_GenerateTableFiles) then
+    print("[DbScriptExtensions] Generating table classes..")
+    Database:GetTableInformations(DbScriptExtensions_Tables)
+    print("[DbScriptExtensions] Table classes generated")
+    print("[DbScriptExtensions] It might be possible that an error occures when accessing a table class. Set DbScriptExtensions_GenerateTableFiles = false (in DbScriptExtensions.ext) and restart the world server. If the problem still occures, please report an issue on GitHub.")
+    require("DbScriptExtensions_Mappings") -- Make sure to load the mappings before loading lua scripts to prevent errors after generating mapping files
+end
+

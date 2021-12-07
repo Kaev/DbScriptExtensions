@@ -1,0 +1,245 @@
+Queryable = {}
+
+function Queryable:__newindex(index, value)
+    -- These both needs to be set before we do any column checking
+    if (index == "__type" or index == "__columns") then
+        rawset(self, index, value)
+        return
+    end
+
+    -- If index is a known table column, set the value in the table column attribute
+    if (self.__columns[index] ~= nil) then
+        rawset(self.__columns, index, value)
+        return
+    end
+
+    rawset(self, index, value)
+end
+
+function Queryable:__index(index)
+    -- If index is a function, return the function
+    if (type(self.__type[index]) == "function") then
+
+        -- We don't to write this over and over again in the mappings so we call it here instead
+        if (index == "Default") then
+            self:PrepareColumns()
+        end
+
+        return self.__type[index]
+    end
+
+    -- If index is in known table columns, return the value of table column attribute
+    if (self.__columns[index] ~= nil) then
+        return rawget(self.__columns, index)
+    end
+
+    -- Return actual attribute value
+    return rawget(self, index)
+end
+
+function Queryable:PrepareColumns()
+    self.__columns = {}
+    self.__columnIds = {}
+    self.__columnById = {}
+    self.__columnIdCounter = 0
+    self.__columnFunctions = {}
+    self.__primaryKeys = {}
+    self.__changeTracker = {}
+end
+
+function Queryable:SetTableName(tableName)
+    self.__tableName = tableName
+end
+
+function Queryable:AddColumn(name, defaultValue, columnType)
+    self.__columns[name] = defaultValue
+    self.__columnIds[name] = self.__columnIdCounter
+    self.__columnById[self.__columnIdCounter] = name
+    self.__columnIdCounter = self.__columnIdCounter + 1
+    self.__columnFunctions[name] = columnType
+end
+
+function Queryable:AddPrimaryKeyColumn(name, defaultValue, columnType)
+    table.insert(self.__primaryKeys, name)
+    self:AddColumn(name, defaultValue, columnType)
+end
+
+function Queryable:GetColumnsAsString()
+    local columns = ""
+    for i = 0, #self.__columnById do
+        columns = columns..self.__columnById[i]
+        if i ~= #self.__columnById then
+            columns = columns..","
+        end
+    end
+    return columns
+end
+
+function Queryable:GetColumnValuesAsString()
+    local values = ""
+    for i = 0, #self.__columnById do
+        local value = self[self.__columnById[i]]
+        if (type(value) == "string") then
+            value = "'"..value.."'"
+        end
+        values = values..value
+        if i ~= #self.__columnById then
+            values = values..","
+        end
+    end
+    return values
+end
+
+function Queryable:RefreshChangeTrackerValues()
+    for k, v in pairs(self.__columns) do
+        self.__changeTracker[k] = v
+    end
+end
+
+function Queryable:ToObject(query)
+    for k, _ in pairs(self.__columns) do
+        self.__columns[k] = self.__columnFunctions[k](query, self.__columnIds[k])
+    end
+end
+
+function Queryable:GetPrimaryKeySelectorString(valueTable)
+    local primaryKeySelectorString = ""
+    for i = 1, #self.__primaryKeys do
+        primaryKeySelectorString = primaryKeySelectorString..self.__primaryKeys[i].."="..self.__columns[self.__primaryKeys[i]]
+        if (i ~= #self.__primaryKeys) then
+            primaryKeySelectorString = primaryKeySelectorString.." AND "
+        end
+    end
+    return primaryKeySelectorString
+end
+
+function Queryable:GetPrimaryKeySelectorStringByValueTable(valueTable)
+    local primaryKeySelectorString = ""
+    for i = 1, #self.__primaryKeys do
+        primaryKeySelectorString = primaryKeySelectorString..self.__primaryKeys[i].."="..valueTable[i]
+        if (i ~= #self.__primaryKeys) then
+            primaryKeySelectorString = primaryKeySelectorString.." AND "
+        end
+    end
+    return primaryKeySelectorString
+end
+
+function Queryable:GetSelectString(primaryKeySelectorString)
+    return "SELECT "..self:GetColumnsAsString().." FROM "..self.__tableName.." WHERE "..primaryKeySelectorString.." LIMIT 1"
+end
+
+function Queryable:GetUpdateString(primaryKeySelectorString, changeString)
+    return "UPDATE "..self.__tableName.." SET "..changeString.." WHERE "..primaryKeySelectorString
+end
+
+function Queryable:GetInsertString()
+    return "INSERT INTO "..self.__tableName.."("..self:GetColumnsAsString()..") VALUES ("..self:GetColumnValuesAsString()..")"
+end
+
+function Queryable:GetDeleteString(primaryKeySelectorString)
+    return "DELETE FROM "..self.__tableName.." WHERE "..primaryKeySelectorString
+end
+
+function Queryable:GetMaxPrimaryKeysString()
+    local query = "SELECT "
+    for i = 1, #self.__primaryKeys do
+        query = query.."MAX("..self.__primaryKeys[i]..")"
+        if (i ~= #self.__primaryKeys) then
+            query = query..","
+        end
+    end
+    query = query.." FROM "..self.__tableName
+    return query
+end
+
+function Queryable:GetChangeTrackerString()
+    local changeString = ""
+    for k, v in pairs(self.__columns) do
+        if (v ~= self.__changeTracker[k]) then
+            local value = self.__columns[k]
+            if (type(value) == "string") then
+                value = "'"..value.."'"
+            end
+            changeString = changeString..k.."="..value..","
+        end
+    end
+    return changeString:sub(1, -2)
+end
+
+function Queryable:Load(...)
+    local obj
+    if (Database:ContainsTable(self)) then -- Static like call, create a new object of table type and modify that
+        obj = self()
+    else -- Function like call, modify current object
+        obj = self
+    end
+    
+    local args = {...}
+
+    if (#obj.__primaryKeys ~= #args) then
+        error("[DbScriptExtensions] You tried to load with "..#args.." IDs but the table has "..#obj.__primaryKeys.." primary keys.")
+    end
+
+    local primaryKeySelectorString = obj:GetPrimaryKeySelectorStringByValueTable(args)
+    local queryString = obj:GetSelectString(primaryKeySelectorString)
+    if (DbScriptExtensions_PrintQueries) then
+        print("[DbScriptExtensions] "..queryString)
+    end
+    local query = WorldDBQuery(queryString)
+    if (not query) then
+        error("[DbScriptExtensions] Query didn't return anything with the following primary keys: "..primaryKeySelectorString)
+    end
+
+    obj:ToObject(query)
+    obj:RefreshChangeTrackerValues()
+    return obj
+end
+
+function Queryable:Save()
+    local primaryKeySelectorString = self:GetPrimaryKeySelectorString(self.__primaryKeys)
+    local selectQueryString = self:GetSelectString(primaryKeySelectorString)
+    local selectQuery = WorldDBQuery(selectQueryString)
+    local query
+    if (selectQuery) then -- Object already exists, use UPDATE
+        local changeTrackerString = self:GetChangeTrackerString()
+        if (changeTrackerString == "") then
+            return -- Don't do anything if there were no changes
+        end
+        query = self:GetUpdateString(primaryKeySelectorString, changeTrackerString)
+    else -- New object, use INSERT
+        query = self:GetInsertString()
+    end
+    if (DbScriptExtensions_PrintQueries) then
+        print("[DbScriptExtensions] "..query)
+    end
+    WorldDBExecute(query)
+    self:RefreshChangeTrackerValues()
+end
+
+function Queryable:Delete()
+    local primaryKeySelectorString = self:GetPrimaryKeySelectorString(self.__primaryKeys)
+    local deleteQueryString = self:GetDeleteString(primaryKeySelectorString)
+    if (DbScriptExtensions_PrintQueries) then
+        print("[DbScriptExtensions] "..deleteQueryString)
+    end
+    WorldDBExecute(deleteQueryString)
+end
+
+function Queryable:GetNewPrimaryKeys()
+    local queryString = self:GetMaxPrimaryKeysString()
+    if (DbScriptExtensions_PrintQueries) then
+        print("[DbScriptExtensions] "..queryString)
+    end
+    local query = WorldDBQuery(queryString)
+    if (query) then
+        local returnTable = {}
+        for i = 1, #self.__primaryKeys do
+            local value = self.__columnFunctions[self.__primaryKeys[i]](query, self.__columns[self.__primaryKeys[i]])
+            
+            table.insert(returnTable, value + 1)
+        end
+        return table.unpack(returnTable)
+    end
+    error("[DbScriptExtensions] Couldn't get new primary keys. Please report as a GitHub issue with a code snippet and the executed query.")
+    return nil
+end

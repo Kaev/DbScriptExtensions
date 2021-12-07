@@ -1,0 +1,13 @@
+ColumnType = {}
+ColumnType.Bool = ElunaQuery.GetBool
+ColumnType.Double = ElunaQuery.GetDouble
+ColumnType.Float = ElunaQuery.GetFloat
+ColumnType.Int8 = ElunaQuery.GetInt8 
+ColumnType.Int16 = ElunaQuery.GetInt16
+ColumnType.Int32 = ElunaQuery.GetInt32
+ColumnType.Int64 = ElunaQuery.GetInt64
+ColumnType.String = ElunaQuery.GetString
+ColumnType.UInt8 = ElunaQuery.GetUInt8
+ColumnType.UInt16 = ElunaQuery.GetUInt16
+ColumnType.UInt32 = ElunaQuery.GetUInt32
+ColumnType.UInt64 = ElunaQuery.GetUInt64

@@ -1,0 +1,206 @@
+Database = {}
+
+setmetatable(Database, {
+    __call = function(cls, ...)
+        local self = setmetatable({}, cls)
+        return self
+    end
+})
+
+function Database:ContainsTable(value)
+    for _, v in ipairs(self.Tables) do
+        if (v == value) then
+            return true
+        end
+    end
+
+    return false
+end
+
+function Database:GetTableInformations()
+    -- taken from TC: https://github.com/TrinityCore/TrinityCore/blob/3.3.5/src/server/database/Database/Field.h#L62
+    local columnTypeFunctions = {
+        ["bit"] = function() return ColumnType.Bool end,
+        ["tinyint"] = function() return ColumnType.Int8 end,
+        ["tinyint unsigned"] = function() return ColumnType.UInt8 end,
+        ["enum"] = function() return ColumnType.UInt8 end,
+        ["smallint"] = function() return ColumnType.Int16 end,
+        ["smallint unsigned"] = function() return ColumnType.UInt16 end,
+        ["mediumint"] = function() return ColumnType.Int32 end,
+        ["mediumint unsigned"] = function() return ColumnType.UInt32 end,
+        ["int"] = function() return ColumnType.Int32 end,
+        ["int unsigned"] = function() return ColumnType.UInt32 end,
+        ["integer"] = function() return ColumnType.Int32 end,
+        ["integer unsigned"] = function() return ColumnType.UInt32 end,
+        ["timestamp"] = function() return ColumnType.UInt32 end,
+        ["bigint"] = function() return ColumnType.Int64 end,
+        ["bigint unsigned"] = function() return ColumnType.UInt64 end,
+        ["float"] = function() return ColumnType.Float end,
+        ["double"] = function() return ColumnType.Double end,
+        ["dec"] = function() return ColumnType.Double end,
+        ["decimal"] = function() return ColumnType.Double end,
+        ["char"] = function() return ColumnType.String end,
+        ["character"] = function() return ColumnType.String end,
+        ["varchar"] = function() return ColumnType.String end,
+        ["tinytext"] = function() return ColumnType.String end,
+        ["mediumtext"] = function() return ColumnType.String end,
+        ["text"] = function() return ColumnType.String end,
+        ["longtext"] = function() return ColumnType.String end,
+        ["binary"] = function() return ColumnType.String end,
+        ["varbinary"] = function() return ColumnType.String end,
+        ["tinyblob"] = function() return ColumnType.String end,
+        ["mediumblob"] = function() return ColumnType.String end,
+        ["blob"] = function() return ColumnType.String end,
+        ["longblob"] = function() return ColumnType.String end,
+    }
+    local columnTypeNames = {
+        ["bit"] = function() return "ColumnType.Bool" end,
+        ["tinyint"] = function() return "ColumnType.Int8" end,
+        ["tinyint unsigned"] = function() return "ColumnType.UInt8" end,
+        ["enum"] = function() return "ColumnType.UInt8" end,
+        ["smallint"] = function() return "ColumnType.Int16" end,
+        ["smallint unsigned"] = function() return "ColumnType.UInt16" end,
+        ["mediumint"] = function() return "ColumnType.Int32" end,
+        ["mediumint unsigned"] = function() return "ColumnType.UInt32" end,
+        ["int"] = function() return "ColumnType.Int32" end,
+        ["int unsigned"] = function() return "ColumnType.UInt32" end,
+        ["integer"] = function() return "ColumnType.Int32" end,
+        ["integer unsigned"] = function() return "ColumnType.UInt32" end,
+        ["timestamp"] = function() return "ColumnType.UInt32" end,
+        ["bigint"] = function() return "ColumnType.Int64" end,
+        ["bigint unsigned"] = function() return "ColumnType.UInt64" end,
+        ["float"] = function() return "ColumnType.Float" end,
+        ["double"] = function() return "ColumnType.Double" end,
+        ["dec"] = function() return "ColumnType.Double" end,
+        ["decimal"] = function() return "ColumnType.Double" end,
+        ["char"] = function() return "ColumnType.String" end,
+        ["character"] = function() return "ColumnType.String" end,
+        ["varchar"] = function() return "ColumnType.String" end,
+        ["tinytext"] = function() return "ColumnType.String" end,
+        ["mediumtext"] = function() return "ColumnType.String" end,
+        ["text"] = function() return "ColumnType.String" end,
+        ["longtext"] = function() return "ColumnType.String" end,
+        ["binary"] = function() return "ColumnType.String" end,
+        ["varbinary"] = function() return "ColumnType.String" end,
+        ["tinyblob"] = function() return "ColumnType.String" end,
+        ["mediumblob"] = function() return "ColumnType.String" end,
+        ["blob"] = function() return "ColumnType.String" end,
+        ["longblob"] = function() return "ColumnType.String" end,
+    }
+
+    local tableQuery = WorldDBQuery("SHOW TABLES")
+    if (not tableQuery) then
+        error("[DbScriptExtensions] Couldn't execute the query \"SHOW TABLES;\". Make sure your MySQL user has the rights to execute it.")
+        return
+    end
+
+    local tableList = {}
+    repeat
+        local tableName = tableQuery:GetString(0)
+        local className = "Db"..tableName:gsub("^%l", tableName.upper):gsub("_(.)", tableName.upper)
+        table.insert(tableList, {
+            tableName = tableName, 
+            className = className
+        })
+    until not tableQuery:NextRow()
+
+    local file = ""
+    local foundTables = {}
+    for i, v in ipairs(tableList) do
+        local tableName = tableList[i].tableName
+        local className = tableList[i].className
+        local query = WorldDBQuery("EXPLAIN "..tableName)
+        if (query) then
+            -- If we got a table description, we add the related class name to the found table list
+            table.insert(foundTables, tableList[i].className)
+
+            local columns = {}
+            repeat
+                local obj = {}
+                obj.field = query:GetString(0)
+                local dataType = query:GetString(1)
+                dataType = dataType:gsub('%(.-%)', '') -- Cut out field length in brackets
+                local columnType = columnTypeNames[dataType]
+                if (columnType == nil) then
+                    error("[DbScriptExtensions] Unreadable column type "..dataType.." found. File generation stopped.")
+                end
+                obj.columnType = columnType()
+                obj.isPrimaryKey = false
+                local key = query:GetString(3)
+                if (key == "PRI") then
+                    obj.isPrimaryKey = true
+                end
+                obj.defaultValue = columnTypeFunctions[dataType]()(query, 4)
+                if (type(obj.defaultValue) == "string") then
+                    obj.defaultValue = "\""..obj.defaultValue.."\""
+                end
+                table.insert(columns, obj)
+            until not query:NextRow()
+
+            file = file.."function "..className..":Default()\n    "
+            file = file.."self:SetTableName(\""..tableName.."\")\n"
+            for _, v in ipairs(columns) do
+                file = file.."    self:Add"
+                if (v.isPrimaryKey) then
+                    file = file.."PrimaryKey"
+                end
+                file = file.."Column(\""..v.field.."\", "..tostring(v.defaultValue)..", "..v.columnType..")\n"
+            end
+            file = file.."end\n\n"
+        end
+    end
+
+    local mappingHeader = ""
+    for i, v in ipairs(foundTables) do
+        mappingHeader = mappingHeader.."require(\"DbScriptExtensions_Mappings_"..foundTables[i].."\")\n"
+    end
+    
+    
+    mappingHeader = mappingHeader.."\nDatabase.Tables = {\n"
+    for i, v in ipairs(foundTables) do
+        mappingHeader = mappingHeader.."    "..foundTables[i]
+        if (i ~= #foundTables) then
+            mappingHeader = mappingHeader..","
+        end
+        mappingHeader = mappingHeader.."\n"
+    end
+    mappingHeader = mappingHeader.."}\n\n"
+    file = mappingHeader..file
+
+    local mappingFilePath = "lua_scripts\\extensions\\DbScriptExtensions\\Mapping\\DbScriptExtensions_Mappings.ext"
+    local mappingFile = io.open(mappingFilePath, "w+")
+    mappingFile:write(file)
+    mappingFile:close()
+
+    local classFileContentTemplate = [[
+require("DbScriptExtensions_Queryable")
+
+className = {}
+for k, v in pairs(Queryable) do
+    className[k] = v
+end
+className.__newindex = Queryable.__newindex
+className.__index = Queryable.__index
+
+setmetatable(className, {
+    __call = function (cls)
+        local self = setmetatable({}, cls)
+        self.__type = className
+        self:Default()
+        self:RefreshChangeTrackerValues()
+        return self
+    end
+})]]
+
+    for i, v in ipairs(foundTables) do
+        local classFileContent = string.gsub(classFileContentTemplate, "className", foundTables[i])
+        local classFilePath = "lua_scripts\\extensions\\DbScriptExtensions\\Mapping\\DbScriptExtensions_Mappings_"..foundTables[i]..".ext"
+        local classFile = io.open(classFilePath, "w+")
+        classFile:write(classFileContent)
+        classFile:close()
+    end
+
+
+
+
+end

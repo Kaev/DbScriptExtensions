@@ -89,7 +89,8 @@ Yes. After adding a new table to your world database, just regenerate the table 
 The mapping is done in the file `lua_scripts\extensions\DbScriptExtensions\Mapping\DbScriptExtensions_Mappings.ext`. You can find all class names in there.
 
 ### Are there any attributes that could help me to create objects in a generic way?
-There are several internal helper attributes that you can use.
+There are several internal helper attributes that you can use. Also check the Queryable class for functions that you could call.
+Example of internal helper attributes:
 ```lua
     local creature = DbCreature():Load(123)
     local guid = creature.__columns["guid"] -- Access column directly by name, same value as creature.guid

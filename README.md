@@ -52,6 +52,9 @@ existingCreature:Load(123) -- Load data of entry with guid = 123 (guid is the pr
 -- Way 2
 local existingCreature = DbCreature():Load(123)
 
+-- You can now access the columns like a normal Lua table. Attribute names are always the same as the column names in the table (case sensitive!).
+print(existingCreature.map) -- Prints the map id of the loaded creature
+
 -- Load entry with combined primary keys
 local existingPlayerCreateInfo = DbPlayercreateinfo():Load(1, 4) -- Table playercreateinfo has a combined primary key based on column race and class. The order will always be the same as in the database which means we're loading the entry with race = 1 AND class = 4
 ```
@@ -70,6 +73,9 @@ existingCreature:Delete() -- Delete row with guid = 123
 ```
 
 ## FAQ
+### Which emulators does it support?
+I only tested it on AzerothCore and TrinityCore, but it should work on all emulators supported by Eluna.
+
 ### What can i do when i see errors in my world server console?
 Set `DbScriptExtensions_PrintQueries = true` in your file `lua_scripts/extensions/DbScriptExtensions/DbScriptExtensions.ext`. Now restart the world server. It should show all DbScriptExtensions SQL queries that it tries to run. Now you can open up an issue on the GitHub repository with the query it tried to execute and a snippet of your code that leads to this error. Make sure to mention which emulator you're using.
 
@@ -86,14 +92,15 @@ Yes. After adding a new table to your world database, just regenerate the table 
 The mapping is done in the file `lua_scripts\extensions\DbScriptExtensions\Mapping\DbScriptExtensions_Mappings.ext`. You can find all class names in there.
 
 ### Are there any attributes that could help me to create objects in a generic way?
-There are several internal helper attributes that you can use.
+There are several internal helper attributes that you can use. Also check the Queryable class for functions that you could call.
+Example of internal helper attributes:
 ```lua
     local creature = DbCreature():Load(123)
     local guid = creature.__columns["guid"] -- Access column directly by name, same value as creature.guid
     local guidColumnId = creature.__columnIds["guid"] -- Will return 0 because guid is the first column in the table creature (it's 0 based because the ElunaQuery functions are 0 based. Lua is usually 1 based)
     local guidColumnName = creature.__columnById[guidColumnId] -- Will return "guid" because column 1 is guid as seen in the line above
     local amountOfColumns = creature.__columnIdCounter -- Will return 24 because the table creature has 24 columns
-    local elunaReadColumnFunction = self.__columnFunctions["guid"] -- Will return function ElunaQuery:GetUInt32 because this is the function to read the value out of an query object. Use like this: elunaReadColumnFunction(query)
+    local elunaReadColumnFunction = creature.__columnFunctions["guid"] -- Will return function ElunaQuery:GetUInt32 because this is the function to read the value out of an query object. Use like this: elunaReadColumnFunction(query, columnId)
     local queryObject = WorldDBQuery("SELECT * FROM creature WHERE guid = 123")
     if (queryObject) then
         local guid = elunaReadColumnFunction(queryObject, guidColumnId) -- Will return 123

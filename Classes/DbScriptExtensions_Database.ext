@@ -133,7 +133,15 @@ function Database:GetTableInformations()
                     obj.isPrimaryKey = true
                 end
                 obj.defaultValue = columnTypeFunctions[dataType]()(query, 4)
-                if (type(obj.defaultValue) == "string") then
+                if (obj.defaultValue == nil) then
+                    if (columnTypeFunctions[dataType]() == ColumnType.String) then
+                        obj.defaultValue = "\"\""
+                    elseif (columnTypeFunctions[dataType]() == ColumnType.Bool) then
+                        obj.defaultValue = "false"
+                    else
+                        obj.defaultValue = 0
+                    end
+                elseif (type(obj.defaultValue) == "string") then
                     obj.defaultValue = "\""..obj.defaultValue.."\""
                 end
                 table.insert(columns, obj)

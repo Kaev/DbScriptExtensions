@@ -108,7 +108,7 @@ Example of internal helper attributes:
 ```
 
 ### Where can i get support?
-You can find me on the official [Eluna Discord server](https://discord.gg/Ed5HK3Dc). Ask your question in the support channel and tag me (Kaev#5208).
+You can find me on the official [Eluna Discord server](https://discord.gg/Ed5HK3Dc). Ask your question in the support channel and tag me (kittykaev).
 
 ### Can i support your work?
-Sure. Contact me via Discord (Kaev#5208).
+Sure. Contact me via Discord (kittykaev).
